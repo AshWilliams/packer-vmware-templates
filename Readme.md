@@ -19,7 +19,13 @@
 
 # Packer Generated VMware Templates
 
-[Packer](https://www.Packer.io/) templates that can be used to create Windows virtual machine templates in VMware. As is, these templates will create a fully patched system with VMware Tools installed running PowerShell Version 5 for Windows Server 2008 R2 Standard, 2012 R2 Standard and 2016 Standard along with CentOS and Ubuntu. Added support for Building VM in vSphere vCenter API (tested with vCenter 6.5). These Packer templates intentionally create vanilla systems.
+[Packer](https://www.Packer.io/) templates that can be used to create Windows virtual machine templates in VMware. 
+
+As is, these templates will create a fully patched system with VMware Tools installed running PowerShell Version 5 for Windows Server 2008 R2 Standard, 2012 R2 Standard and 2016 Standard along with CentOS and Ubuntu. 
+
+With [Jetbrains Plugin for vSphere](https://github.com/jetbrains-infra/packer-builder-vsphere), added support for Building VM in vCenter using vSphere API (tested with vCenter 6.5).
+
+These Packer templates intentionally create vanilla systems.
 
 ## Use case
 
@@ -121,6 +127,8 @@ Windows updates are handled via the Packer provisioner [Packer-provisioner-windo
 ### Sysprep
 
 There are many uses for Packer, the most common for vagrant box generation. Typically, at the end of any Windows Packer run the system is sysprep'd and an unattend.xml is copied over to configure WinRM for when the box completes sysprep'ing. @matthodge does an excellent job in explaining this here: [Disable WinRM on build completion and only enable it on first boot](https://hodgkins.io/best-practices-with-Packer-and-windows#disable-winrm-on-build-completion-and-only-enable-it-on-first-boot). Since these Packer templates are specifically for generating VMware templates, the generated VM is not sysprep'd. **It's expected that something will be used to sysprep the VM once it's been cloned from the template (like a customization specification or some other post deployment configuration).**
+
+sysprep is added in vsphere-iso build
 
 ### Post deployment tasks
 
