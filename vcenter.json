@@ -1,0 +1,9 @@
+{
+  "vcenter_server": "vcenter.example.com",
+  "vcenter_datacenter": "dc",
+  "vcenter_cluster": "cluster01",
+  "vcenter_datastore": "ds01",
+  "vcenter_host": "node1.example.com",
+  "vcenter_network": "private_network",
+  "vcenter_username" : "user"
+}    

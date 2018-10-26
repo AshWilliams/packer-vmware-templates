@@ -19,7 +19,7 @@
 
 # Packer Generated VMware Templates
 
-[Packer](https://www.Packer.io/) templates that can be used to create Windows virtual machine templates in VMware. 
+[Packer](https://www.Packer.io/) templates that can be used to create Windows and Linux virtual machine templates in VMware. 
 
 As is, these templates will create a fully patched system with VMware Tools installed running PowerShell Version 5 for Windows Server 2008 R2 Standard, 2012 R2 Standard and 2016 Standard along with CentOS and Ubuntu. 
 
@@ -62,8 +62,9 @@ Regenerating a fully patched Windows machine takes time. But who cares if it's t
 These Packer templates require Internet access to pull down VMware tools, different versions of WMF, and Windows updates; consider hosting the binaries internally and using WSUS if air-gapped.
 
 ## How it works
+Using vsphere-iso provided by Jetbrains the VM can be built directory in vSphere using vCenter API.
 
-Use Packer to locally build a VM in [VMware Workstation](https://www.vmware.com/products/workstation.html) and then upload it to a vCenter via the Packer [vSphere Post-Processor](https://www.Packer.io/docs/post-processors/vsphere.html). Use PowerCLI to adjust anything extra on the VM and convert it to a template.
+Alternatively, use Packer to locally build a VM in [VMware Workstation](https://www.vmware.com/products/workstation.html) and then upload it to a vCenter via the Packer [vSphere Post-Processor](https://www.Packer.io/docs/post-processors/vsphere.html). Use PowerCLI to adjust anything extra on the VM and convert it to a template.
 
 ## Getting started
 
@@ -85,7 +86,8 @@ As listed in the prerequisites you'll need to modify the variables-global-templa
 
 Simply via the command line
 ```cmd
-Packer build -force -var-file .\variables-global.json -var 'vcenter_password=SecretPassword' -var 'name=Template2008r2' .\vsphere-2008r2.json
+Packer build -force -var-file .\variables-global.json -var 'vcenter_password=SecretPassword' -var 'name=Template2008r2' .\vsphere-2008r2.json or
+Packer build -only=windows-2012R2-std-vsphere -var-file .\vcenter.json -var 'vcenter_password=SecretPassword' .\windows_2012r2_std.json
 ```
 
 Or maybe wrapped in PowerShell leveraging @jaykul [BetterCredentials](https://www.powershellgallery.com/packages/BetterCredentials) module so not to store the vCenter password in plaintext. 
@@ -128,7 +130,7 @@ Windows updates are handled via the Packer provisioner [Packer-provisioner-windo
 
 There are many uses for Packer, the most common for vagrant box generation. Typically, at the end of any Windows Packer run the system is sysprep'd and an unattend.xml is copied over to configure WinRM for when the box completes sysprep'ing. @matthodge does an excellent job in explaining this here: [Disable WinRM on build completion and only enable it on first boot](https://hodgkins.io/best-practices-with-Packer-and-windows#disable-winrm-on-build-completion-and-only-enable-it-on-first-boot). Since these Packer templates are specifically for generating VMware templates, the generated VM is not sysprep'd. **It's expected that something will be used to sysprep the VM once it's been cloned from the template (like a customization specification or some other post deployment configuration).**
 
-sysprep is added in vsphere-iso build
+sysprep is added in vsphere-iso build  
 
 ### Post deployment tasks
 
