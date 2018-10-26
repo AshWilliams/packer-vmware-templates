@@ -1,0 +1,161 @@
+{
+  "variables": {
+    "autounattend": "./answer_files/2012_r2std/Autounattend.xml",
+    "guest_additions_mode": "disable",
+    "headless": "false",
+    "vm_name": "packer-build-windows-2012R2-std",
+    "disk_size": "61440",
+    "disk_type_id": "1",    
+    "disk_mode": "thick",    
+    "memory": "2048",
+    "cpu": "2",    
+    "iso_checksum_type": "sha1",
+    "iso_checksum": "d4b28f350981a7c3306dd409b172aea10d8599ac",
+    "iso_url": "iso/SW_DVD9_Windows_Svr_Std_and_DataCtr_2012_R2_64Bit_English_-3_MLF_X19-53588.ISO",
+    "vcenter_server": "",
+    "vcenter_datacenter": "",
+    "vcenter_cluster": "",
+    "vcenter_datastore": "",
+    "vcenter_host": "",
+    "vcenter_network": "",
+    "vcenter_username": "",
+    "vcenter_password": ""
+
+  },
+  "builders": [
+   {
+      "name": "windows-2012R2-std-vsphere",
+      "type": "vsphere-iso",
+      "vcenter_server":      "{{ user `vcenter_server` }}",
+      "datacenter":          "{{ user `vcenter_datacenter` }}",
+      "username":            "{{ user `vcenter_username` }}",
+      "password":            "{{ user `vcenter_password` }}",
+      "insecure_connection": true,
+
+      "vm_name": "{{user `vm_name`}}",
+      "host":    "{{ user `vcenter_host` }}",
+      "cluster": "{{ user `vcenter_cluster` }}",
+      "datastore" : "{{ user `vcenter_datastore` }}",
+
+      "communicator": "winrm",
+      "winrm_username": "vagrant",
+      "winrm_password": "vagrant",
+      "shutdown_command": "shutdown /s /t 0 /f /d p:4:1 /c \"Packer Shutdown\"",
+      "shutdown_timeout" : "15m",
+      
+      "guest_os_type": "windows8Server64Guest",
+      "vm_version" : 13,
+      "CPUs":"{{user `cpu`}}",
+      "CPU_limit": -1,
+      "RAM": "{{user `memory`}}",
+      "RAM_reserve_all": true,
+      "disk_controller_type": "lsilogic-sas",
+      "disk_size": "{{user `disk_size`}}",
+      "disk_thin_provisioned": false,
+      "network":  "{{ user `vcenter_network` }}",
+      "network_card" : "e1000e",
+  
+      "iso_paths": [
+        "[{{ user `vcenter_datastore` }}]ISOs/Microsoft/Windows Server/2012R2/SW_DVD5_Windows_Svr_Std_and_DataCtr_2012_R2_64Bit_English_Core_MLF_X19-05182.ISO",        
+        "[{{ user `vcenter_datastore` }}]ISOs/VMware Tools/10.2.5/windows.iso"
+      ],
+
+      "floppy_files": [
+        "{{user `autounattend`}}",
+        "./scripts/disable-winrm.ps1",
+        "./scripts/enable-winrm.ps1",
+        "./scripts/microsoft-updates.bat",
+        "./scripts/unattend.xml"
+      ],
+      "floppy_img_path": "[{{ user `vcenter_datastore` }}]ISOs/VMware Tools/10.2.5/pvscsi-Windows8.flp"        
+    },  
+  {
+    "name": "windows-2012R2-std-vmware",      
+    "type": "vmware-iso",
+    "disk_size": "{{user `disk_size`}}",
+    "headless": "{{ user `headless` }}",
+    "iso_urls": [ "{{ user `iso_url` }}",
+                  "http://care.dlservice.microsoft.com/dl/download/6/2/A/62A76ABB-9990-4EFC-A4FE-C7D698DAEB96/9600.17050.WINBLUE_REFRESH.140317-1640_X64FRE_SERVER_EVAL_EN-US-IR3_SSS_X64FREE_EN-US_DV9.ISO"
+                ],
+    "iso_checksum": "{{ user `iso_checksum` }}",
+    "iso_checksum_type": "{{ user `iso_checksum_type` }}",
+    "boot_wait": "5m",
+    "vm_name": "{{user `vm_name`}}",
+    "communicator": "winrm",
+    "winrm_username": "vagrant",
+    "winrm_password": "vagrant",
+    "winrm_timeout": "12h",
+    "winrm_port" : "5985",
+    "shutdown_command": "shutdown /s /t 0 /f /d p:4:1 /c \"Packer Shutdown\"",
+    "shutdown_timeout" : "15m",
+    "floppy_files": [
+      "{{user `autounattend`}}",
+      "./scripts/disable-winrm.ps1",
+      "./scripts/enable-winrm.ps1",
+      "./scripts/microsoft-updates.bat",
+      "./scripts/unattend.xml",
+      "./scripts/sysprep.bat"
+    ],        
+    "vmx_data": {  
+        "memsize": "{{user `memory`}}",
+        "numvcpus": "{{user `cpu`}}",
+        "scsi0.virtualDev": "lsisas1068",
+        "RemoteDisplay.vnc.enabled": "false",
+        "RemoteDisplay.vnc.port": "5900"                
+    }
+  }
+  ],
+  "provisioners": [    
+      {
+       "type": "powershell",       
+       "scripts": [
+          "./scripts/setup.ps1",
+          "./scripts/Install-Net35.ps1"
+       ]
+      },
+      {
+        "type": "windows-restart"
+      },      
+     {
+      "type": "windows-shell",
+      "scripts": [        
+        "./scripts/enable-rdp.bat",
+        "./scripts/sysprep.bat"   
+      ]     
+    },
+     {
+      "type": "windows-shell",
+      "only": ["windows-2012R2-std-vmware"],
+      "scripts": [
+        "./scripts/vm-guest-tools.bat",
+        "./scripts/enable-rdp.bat",
+        "./scripts/compile-dotnet-assemblies.bat",
+        "./scripts/compact.bat"
+      ]     
+    }
+  ],
+  "post-processors": [
+    [
+     {
+      "type": "vsphere",
+      "only": ["windows-2012R2-std-vmware"],
+      "type": "vsphere",
+      "cluster": "{{ user `vcenter_cluster` }}",
+      "datacenter": "{{ user `vcenter_datacenter` }}",
+      "datastore": "{{ user `vcenter_datastore` }}",
+      "host": "{{ user `vcenter_host` }}",
+      "username": "{{ user `vcenter_username` }}",
+      "password": "{{ user `vcenter_password` }}",      
+      "disk_mode": "{{ user `disk_mode` }}",
+      "vm_network": "{{ user `vcenter_network` }}",     
+      "vm_name": "{{user `vm_name`}}",
+      "resource_pool": "",
+      "overwrite": "true",
+        "options": [
+         "--noSSLVerify"
+      ]
+     }
+    ]
+  ]
+
+}

@@ -1,0 +1,158 @@
+{
+  "variables": {
+    "autounattend": "./answer_files/2016_std/Autounattend.xml",
+    "guest_additions_mode": "disable",
+    "headless": "false",
+    "vm_name": "packer-build-windows-2016-std",
+    "disk_size": "61440",
+    "disk_type_id": "1",    
+    "disk_mode": "thick",
+    "memory": "1024",
+    "cpu": "2",    
+    "iso_checksum_type": "sha1",
+    "iso_checksum": "7adc82e00f1367b43897bb969a75bbf96d46f588",
+    "iso_url": "iso/en_windows_server_2016_updated_feb_2018_x64_dvd_11636692.iso",
+    "vcenter_server": "",
+    "vcenter_datacenter": "",
+    "vcenter_cluster": "",
+    "vcenter_datastore": "",
+    "vcenter_host": "",
+    "vcenter_network": "",
+    "vcenter_username": "",
+    "vcenter_password": ""    
+  },
+  "builders": [
+    {
+      "name": "windows-2016-std-vsphere",
+      "type": "vsphere-iso",
+      "vcenter_server":      "{{ user `vcenter_server` }}",
+      "datacenter":          "{{ user `vcenter_datacenter` }}",
+      "username":            "{{ user `vcenter_username` }}",
+      "password":            "{{ user `vcenter_password` }}",
+      "insecure_connection": true,
+
+      "vm_name": "{{user `vm_name`}}",
+      "host":    "{{ user `vcenter_host` }}",
+      "cluster": "{{ user `vcenter_cluster` }}",
+      "datastore" : "{{ user `vcenter_datastore` }}",
+
+      "communicator": "winrm",
+      "winrm_username": "vagrant",
+      "winrm_password": "vagrant",             
+      "shutdown_command": "a:/sysprep.bat",
+      "shutdown_timeout" : "15m",  
+      "guest_os_type": "windows9Server64Guest",
+      "vm_version" : 13,
+      "CPUs":"{{user `cpu`}}",
+      "CPU_limit": -1,
+      "RAM": "{{user `memory`}}",
+      "RAM_reserve_all": true,
+      "disk_controller_type": "lsilogic-sas",
+      "disk_size": "{{user `disk_size`}}",
+      "disk_thin_provisioned": false,
+      "network":  "{{ user `vcenter_network` }}",
+      "network_card" : "e1000e",
+  
+      "iso_paths": [
+        "[{{ user `vcenter_datastore` }}]ISOs/Microsoft/Windows Server/2016/SW_DVD9_Win_Svr_STD_Core_and_DataCtr_Core_2016_64Bit_English_-3_MLF_X21-30350.ISO",        
+        "[{{ user `vcenter_datastore` }}]ISOs/VMware Tools/10.2.5/windows.iso"
+      ],
+
+      "floppy_files": [
+        "{{user `autounattend`}}",
+        "./scripts/disable-winrm.ps1",
+        "./scripts/enable-winrm.ps1",
+        "./scripts/microsoft-updates.bat",
+        "./scripts/unattend.xml",
+        "./scripts/sysprep.bat"
+      ],    
+      "floppy_img_path": "[{{ user `vcenter_datastore` }}]ISOs/VMware Tools/10.2.5/pvscsi-Windows8.flp"  
+    },
+    {
+      "name": "windows-2016-std-vmware",      
+      "type": "vmware-iso",
+      "disk_size": "{{user `disk_size`}}",
+      "headless": "{{ user `headless` }}",
+      "iso_urls": [ "{{ user `iso_url` }}",
+                    "http://care.dlservice.microsoft.com/dl/download/1/4/9/149D5452-9B29-4274-B6B3-5361DBDA30BC/14393.0.161119-1705.RS1_REFRESH_SERVER_EVAL_X64FRE_EN-US.ISO"
+                  ],
+      "iso_checksum": "{{ user `iso_checksum` }}",
+      "iso_checksum_type": "sha1",
+      "boot_wait": "5m",
+      "vm_name": "{{user `vm_name`}}",
+      "communicator": "winrm",
+      "winrm_username": "vagrant",
+      "winrm_password": "vagrant",
+      "winrm_timeout": "12h",
+      "winrm_port" : "5985",
+      "shutdown_command": "a:/sysprep.bat",
+      "shutdown_timeout" : "15m",      
+      "floppy_files": [
+        "{{user `autounattend`}}",
+        "./scripts/disable-winrm.ps1",
+        "./scripts/enable-winrm.ps1",
+        "./scripts/microsoft-updates.bat",
+        "./scripts/unattend.xml",
+        "./scripts/sysprep.bat"
+      ],        
+       "vmx_data": {
+         "memsize": "{{user `memory`}}",
+         "numvcpus": "{{user `cpu`}}",
+          "scsi0.virtualDev": "lsisas1068",
+          "RemoteDisplay.vnc.enabled": "false",
+          "RemoteDisplay.vnc.port": "5900"        
+     }
+    }
+  ],
+  "provisioners": [   
+     {
+       "type": "powershell",       
+       "scripts": [
+          "./scripts/setup.ps1",
+          "./scripts/Install-Nuget.ps1",
+          "./scripts/Remove-UpdateCache.ps1",
+          "./scripts/Invoke-Defrag.ps1",
+          "./scripts/Reset-EmptySpace.ps1"
+       ]
+      }, 
+    {
+      "type": "windows-shell",
+      "scripts": [                
+        "./scripts/enable-rdp.bat"
+      ]     
+    },
+    {
+      "type": "windows-shell",
+      "only": ["windows-2016-std-vmware"],
+      "scripts": [
+        "./scripts/vm-guest-tools.bat",
+        "./scripts/enable-rdp.bat",
+        "./scripts/compile-dotnet-assemblies.bat",
+        "./scripts/compact.bat"
+      ]     
+    }
+
+  ],
+   "post-processors": [
+    [
+     {
+      "type": "vsphere",
+      "only": ["windows-2016-std-vmware"],      
+      "cluster": "{{ user `vcenter_cluster` }}",
+      "datacenter": "{{ user `vcenter_datacenter` }}",
+      "datastore": "{{ user `vcenter_datastore` }}",
+      "host": "{{ user `vcenter_host` }}",
+      "username": "{{ user `vcenter_username` }}",
+      "password": "{{ user `vcenter_password` }}",      
+      "disk_mode": "{{ user `disk_mode` }}",
+      "vm_network": "{{ user `vcenter_network` }}",     
+      "vm_name": "{{user `vm_name`}}",
+      "resource_pool": "",
+      "overwrite": "true",
+        "options": [
+         "--noSSLVerify"
+      ]
+     }
+    ]
+  ]
+}
